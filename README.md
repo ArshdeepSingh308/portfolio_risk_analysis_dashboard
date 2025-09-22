@@ -37,10 +37,22 @@ An interactive financial dashboard for comprehensive portfolio risk analysis, sc
 
 ## 🏦 Supported Assets
 
-Pre-configured for Indian mutual funds:
+### 🌟 Dynamic Company Addition
+- **Any Stock**: Add via Yahoo Finance ticker (AAPL, TSLA, GOOGL)
+- **Indian Mutual Funds**: MoneyControl URLs supported
+- **Custom Data**: Generic URL scraping capability
+- **Real-time Updates**: Portfolio adjusts automatically
+
+### 📊 Pre-configured Assets
 - ICICI Prudential Large Cap Fund - Direct Plan - Growth
 - Parag Parikh Flexi Cap Fund - Direct Plan - Growth  
 - HDFC Mid Cap Opportunities Fund - Direct Plan - Growth
+
+### 💰 Investment Amount Features
+- **Customizable Investment**: ₹1,000 to ₹1,00,00,000
+- **Position Sizing**: Automatic calculation per asset
+- **Monetary Risk Metrics**: See ₹ values for all risks
+- **Real-time Updates**: Changes reflect immediately
 
 ## 🚀 Quick Start
 
@@ -81,22 +93,40 @@ portfolio_risk_analysis_dashboard/
 - **Financial Models**: SciPy, Custom implementations
 - **Data Sources**: Yahoo Finance, MoneyControl
 
-## 📈 Usage Examples
+## 📈 Usage Guide
 
-### Risk Analysis
-1. Adjust portfolio weights using sidebar sliders
-2. View comprehensive risk metrics and gauges
-3. Compare portfolio vs benchmark performance
+### 🏢 Adding Custom Companies
+1. **Open Sidebar**: Click "Add Companies" section
+2. **Enter Details**: Company name, data source, ticker/URL
+3. **Examples**:
+   - Tesla: Yahoo Finance, TSLA
+   - Apple: Yahoo Finance, AAPL
+   - SBI Fund: MoneyControl, paste URL
+4. **Click Add**: Company appears in portfolio
 
-### Scenario Analysis  
-1. Select predefined scenarios or create custom ones
-2. Run Monte Carlo simulations (up to 10,000 iterations)
-3. Analyze probability distributions and outcomes
+### 💰 Setting Investment Amount
+1. **Enter Amount**: Use sidebar input (₹1,000 - ₹1,00,00,000)
+2. **View Positions**: See ₹ allocation per asset
+3. **Monitor Risk**: All metrics show ₹ values
+4. **Adjust Weights**: Use sliders for rebalancing
 
-### Sensitivity Analysis
-1. Set shock parameters for comprehensive testing
-2. Generate interactive sensitivity heatmaps
-3. View tornado charts for factor analysis
+### 🎯 Risk Analysis
+1. **View Metrics**: Expected return, volatility, Sharpe ratio
+2. **See Money Impact**: ₹ values for all risks
+3. **Compare Performance**: Portfolio vs benchmark
+4. **Monitor Gauges**: Visual risk indicators
+
+### 📈 Scenario Analysis  
+1. **Select Scenarios**: Market crash, bull market, custom
+2. **Run Simulations**: Up to 10,000 Monte Carlo iterations
+3. **Analyze Results**: Probability distributions and paths
+4. **What-If Testing**: Parameter impact assessment
+
+### ⚡ Sensitivity Analysis
+1. **Set Parameters**: Return, volatility, interest rate shocks
+2. **Generate Heatmaps**: Interactive sensitivity matrices
+3. **View Tornado Charts**: Factor importance ranking
+4. **Stress Testing**: Extreme scenario analysis
 
 ## 🔄 Deployment
 

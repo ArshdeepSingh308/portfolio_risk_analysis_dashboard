@@ -80,6 +80,8 @@ st.markdown("""
 if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
     st.session_state.loader = DataLoader()
+    st.session_state.user_companies = []
+    st.session_state.company_urls = {}
 
 @st.cache_data
 def load_all_data():
@@ -174,17 +176,72 @@ benchmark_data = st.session_state.benchmark_data
 risk_data = st.session_state.risk_data
 interest_data = st.session_state.interest_data
 
-# Initialize analyzer
-analyzer = PortfolioAnalyzer(scheme_data, benchmark_data, risk_data, interest_data)
-scheme_returns = analyzer.calculate_returns(scheme_data)
+# Initialize with default data first
+analyzer = PortfolioAnalyzer(st.session_state.scheme_data, benchmark_data, risk_data, interest_data)
 benchmark_returns = analyzer.calculate_returns(benchmark_data)
 
 # Sidebar configuration
 st.sidebar.markdown("## 🎛️ Portfolio Configuration")
 
-# Portfolio weights
-st.sidebar.markdown("### 📊 Asset Allocation")
+# Company Data Input Section
+st.sidebar.markdown("### 🏢 Add Companies")
+with st.sidebar.expander("Add New Company", expanded=False):
+    company_name = st.text_input("Company Name", placeholder="e.g., Apple Inc")
+    data_source = st.selectbox("Data Source", ["Yahoo Finance", "MoneyControl", "Generic URL"])
+    
+    if data_source == "Yahoo Finance":
+        company_url = st.text_input("Ticker Symbol", placeholder="e.g., AAPL")
+        data_type = 'yahoo'
+    elif data_source == "MoneyControl":
+        company_url = st.text_input("MoneyControl URL", placeholder="https://www.moneycontrol.com/...")
+        data_type = 'moneycontrol'
+    else:
+        company_url = st.text_input("Data URL", placeholder="https://...")
+        data_type = 'generic'
+    
+    add_clicked = st.button("➕ Add Company", key="add_company_btn")
+    
+    if add_clicked:
+        if not company_name:
+            st.error("Please enter a company name")
+        elif not company_url:
+            st.error("Please enter a ticker/URL")
+        else:
+            try:
+                st.session_state.loader.add_company_data(company_name, company_url, data_type)
+                if company_name not in st.session_state.user_companies:
+                    st.session_state.user_companies.append(company_name)
+                    st.session_state.company_urls[company_name] = company_url
+                st.success(f"Added {company_name}!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error adding company: {e}")
+
+# Display added companies
+if st.session_state.user_companies:
+    st.sidebar.markdown("### 📈 Your Companies")
+    for company in st.session_state.user_companies:
+        col1, col2 = st.sidebar.columns([3, 1])
+        col1.write(f"• {company}")
+        if col2.button("🗑️", key=f"del_{company}"):
+            st.session_state.user_companies.remove(company)
+            del st.session_state.company_urls[company]
+            st.rerun()
+
+# Load data with user companies or default
+if st.session_state.user_companies:
+    scheme_data = st.session_state.loader.load_scheme_historical_data(st.session_state.user_companies)
+else:
+    scheme_data = st.session_state.scheme_data
+
+# Always reinitialize analyzer with current data
+analyzer = PortfolioAnalyzer(scheme_data, benchmark_data, risk_data, interest_data)
+scheme_returns = analyzer.calculate_returns(scheme_data)
+
 fund_names = list(scheme_data.columns)
+
+# Portfolio weights
+st.sidebar.markdown("### ⚖️ Asset Allocation")
 portfolio_weights = {}
 
 for i, fund in enumerate(fund_names):
@@ -212,6 +269,28 @@ st.sidebar.markdown("### 📈 Current Allocation")
 for fund, weight in portfolio_weights.items():
     clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
     st.sidebar.write(f"**{clean_name}**: {weight:.1%}")
+
+# Investment amount
+st.sidebar.markdown("### 💰 Investment Amount")
+investment_amount = st.sidebar.number_input(
+    "Total Investment (₹)",
+    min_value=1000,
+    max_value=10000000,
+    value=100000,
+    step=1000,
+    format="%d"
+)
+
+# Calculate position sizes
+position_values = {}
+for fund, weight in portfolio_weights.items():
+    position_values[fund] = investment_amount * weight
+
+# Display position values
+st.sidebar.markdown("### 📊 Position Values")
+for fund, value in position_values.items():
+    clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
+    st.sidebar.write(f"**{clean_name}**: ₹{value:,.0f}")
 
 # Risk tolerance
 st.sidebar.markdown("### ⚠️ Risk Settings")
@@ -249,12 +328,14 @@ with tab1:
     
     with col1:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📈 Expected Return", f"{portfolio_metrics['Expected_Return']:.2%}")
+        expected_return_value = investment_amount * portfolio_metrics['Expected_Return']
+        st.metric("📈 Expected Return", f"{portfolio_metrics['Expected_Return']:.2%}", f"₹{expected_return_value:,.0f}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📊 Volatility", f"{portfolio_metrics['Volatility']:.2%}")
+        volatility_value = investment_amount * portfolio_metrics['Volatility']
+        st.metric("📊 Volatility", f"{portfolio_metrics['Volatility']:.2%}", f"₹{volatility_value:,.0f}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col3:
@@ -264,7 +345,8 @@ with tab1:
     
     with col4:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("📉 Max Drawdown", f"{portfolio_metrics['Max_Drawdown']:.2%}")
+        max_drawdown_value = investment_amount * abs(portfolio_metrics['Max_Drawdown'])
+        st.metric("📉 Max Drawdown", f"{portfolio_metrics['Max_Drawdown']:.2%}", f"₹{max_drawdown_value:,.0f}")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Performance chart and risk gauges
@@ -318,15 +400,20 @@ with tab1:
     
     with col1:
         st.markdown("**📈 Return Metrics**")
-        st.write(f"Expected Return: {portfolio_metrics['Expected_Return']:.2%}")
-        st.write(f"Alpha: {portfolio_metrics['Alpha']:.2%}")
+        expected_return_amount = investment_amount * portfolio_metrics['Expected_Return']
+        alpha_amount = investment_amount * portfolio_metrics['Alpha']
+        st.write(f"Expected Return: {portfolio_metrics['Expected_Return']:.2%} (₹{expected_return_amount:,.0f})")
+        st.write(f"Alpha: {portfolio_metrics['Alpha']:.2%} (₹{alpha_amount:,.0f})")
         st.write(f"Beta: {portfolio_metrics['Beta']:.3f}")
         
     with col2:
         st.markdown("**⚠️ Risk Metrics**")
-        st.write(f"Volatility: {portfolio_metrics['Volatility']:.2%}")
-        st.write(f"VaR (95%): {portfolio_metrics['VaR_95']:.2%}")
-        st.write(f"CVaR (95%): {portfolio_metrics['CVaR_95']:.2%}")
+        volatility_amount = investment_amount * portfolio_metrics['Volatility']
+        var_amount = investment_amount * abs(portfolio_metrics['VaR_95'])
+        cvar_amount = investment_amount * abs(portfolio_metrics['CVaR_95'])
+        st.write(f"Volatility: {portfolio_metrics['Volatility']:.2%} (₹{volatility_amount:,.0f})")
+        st.write(f"VaR (95%): {portfolio_metrics['VaR_95']:.2%} (₹{var_amount:,.0f})")
+        st.write(f"CVaR (95%): {portfolio_metrics['CVaR_95']:.2%} (₹{cvar_amount:,.0f})")
         
     with col3:
         st.markdown("**📊 Risk-Adjusted Metrics**")
