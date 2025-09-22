@@ -87,8 +87,11 @@ st.markdown("""
 # Initialize session state
 if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
+if 'loader' not in st.session_state:
     st.session_state.loader = DataLoader()
+if 'user_companies' not in st.session_state:
     st.session_state.user_companies = []
+if 'selected_defaults' not in st.session_state:
     st.session_state.selected_defaults = ['ICICI_Large_Cap_NAV', 'Parag_Parikh_Flexi_NAV', 'HDFC_Mid_Cap_NAV']
 
 @st.cache_data
