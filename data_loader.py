@@ -49,9 +49,12 @@ class DataLoader:
     def _fetch_yahoo_data(self, ticker):
         """Fetch data from Yahoo Finance"""
         try:
-            data = yf.download(ticker, start='2020-01-01', end='2024-01-01', progress=False)['Adj Close']
-            return data.fillna(method='ffill')
-        except:
+            data = yf.download(ticker, start='2020-01-01', end='2024-01-01', progress=False)
+            if data.empty or 'Adj Close' not in data.columns:
+                return self._generate_sample_company_data(ticker)
+            return data['Adj Close'].fillna(method='ffill')
+        except Exception as e:
+            print(f"Yahoo Finance error for {ticker}: {e}")
             return self._generate_sample_company_data(ticker)
     
     def _fetch_moneycontrol_data(self, url, company_name):
@@ -99,15 +102,25 @@ class DataLoader:
         """Load data for multiple user-defined companies"""
         portfolio_data = {}
         
+        # Handle empty company list
+        if not company_list:
+            return pd.DataFrame()
+        
         for company_name in company_list:
             if company_name in self.user_companies:
                 data = self.fetch_user_company_data(company_name)
-                if data is not None:
+                if data is not None and len(data) > 0:
                     portfolio_data[company_name] = data
             else:
                 # Generate sample data for unknown companies
-                portfolio_data[company_name] = self._generate_sample_company_data(company_name)
+                data = self._generate_sample_company_data(company_name)
+                if data is not None and len(data) > 0:
+                    portfolio_data[company_name] = data
         
+        # Return empty DataFrame if no valid data
+        if not portfolio_data:
+            return pd.DataFrame()
+            
         return pd.DataFrame(portfolio_data)
         
     def load_scheme_historical_data(self, custom_companies=None):

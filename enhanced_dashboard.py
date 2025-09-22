@@ -17,62 +17,70 @@ except ImportError:
 
 # Page configuration
 st.set_page_config(
-    page_title="Advanced Portfolio Risk & Analysis Dashboard",
+    page_title="Portfolio Risk Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Modern CSS styling
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
+    .main { padding-top: 1rem; }
+    .stApp { background-color: #f8f9fa; }
+    
+    .main-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1e293b;
         text-align: center;
-        color: #1f77b4;
+        margin-bottom: 0.5rem;
+    }
+    .subtitle {
+        font-size: 1.1rem;
+        color: #64748b;
+        text-align: center;
         margin-bottom: 2rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
-    .sub-header {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #2c3e50;
-        margin: 1rem 0;
+    
+    [data-testid="metric-container"] {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin: 0.5rem 0;
-    }
-    .risk-high { border-left: 5px solid #e74c3c; }
-    .risk-medium { border-left: 5px solid #f39c12; }
-    .risk-low { border-left: 5px solid #27ae60; }
     
     .stTabs [data-baseweb="tab-list"] {
-        gap: 5px;
+        gap: 8px;
+        background-color: #f1f5f9;
+        padding: 4px;
+        border-radius: 8px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 60px;
-        padding: 10px 25px;
-        background-color: #f8f9fa;
-        border-radius: 10px 10px 0 0;
-        border: 2px solid #dee2e6;
+        height: 50px;
+        background-color: transparent;
+        border-radius: 6px;
+        color: #64748b;
+        font-weight: 500;
     }
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background-color: #1f77b4;
-        color: white;
+        background-color: white;
+        color: #1e293b;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    .sensitivity-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 1rem 0;
+    .stButton > button {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
     }
+    
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -81,42 +89,31 @@ if 'data_loaded' not in st.session_state:
     st.session_state.data_loaded = False
     st.session_state.loader = DataLoader()
     st.session_state.user_companies = []
-    st.session_state.company_urls = {}
+    st.session_state.selected_defaults = ['ICICI_Large_Cap_NAV', 'Parag_Parikh_Flexi_NAV', 'HDFC_Mid_Cap_NAV']
 
 @st.cache_data
 def load_all_data():
-    """Load all required data"""
     loader = DataLoader()
-    
-    with st.spinner("Loading portfolio data..."):
-        scheme_data = loader.load_scheme_historical_data()
-    
-    with st.spinner("Loading benchmark data..."):
-        benchmark_data = loader.load_benchmark_historical_data()
-    
-    with st.spinner("Loading risk parameters..."):
-        risk_data = loader.load_risk_analysis_data()
-    
-    with st.spinner("Loading interest rate data..."):
-        interest_data = loader.load_interest_rate_data()
-    
+    scheme_data = loader.load_scheme_historical_data()
+    benchmark_data = loader.load_benchmark_historical_data()
+    risk_data = loader.load_risk_analysis_data()
+    interest_data = loader.load_interest_rate_data()
     return scheme_data, benchmark_data, risk_data, interest_data
 
 def create_risk_gauge(value, title, min_val=0, max_val=1, threshold_low=0.3, threshold_high=0.7):
-    """Create a risk gauge chart"""
     fig = go.Figure(go.Indicator(
-        mode = "gauge+number+delta",
-        value = value,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': title},
-        delta = {'reference': (threshold_low + threshold_high) / 2},
-        gauge = {
+        mode="gauge+number+delta",
+        value=value,
+        domain={'x': [0, 1], 'y': [0, 1]},
+        title={'text': title},
+        delta={'reference': (threshold_low + threshold_high) / 2},
+        gauge={
             'axis': {'range': [None, max_val]},
-            'bar': {'color': "darkblue"},
+            'bar': {'color': "#3b82f6"},
             'steps': [
-                {'range': [min_val, threshold_low], 'color': "lightgreen"},
-                {'range': [threshold_low, threshold_high], 'color': "yellow"},
-                {'range': [threshold_high, max_val], 'color': "lightcoral"}
+                {'range': [min_val, threshold_low], 'color': "#10b981"},
+                {'range': [threshold_low, threshold_high], 'color': "#f59e0b"},
+                {'range': [threshold_high, max_val], 'color': "#ef4444"}
             ],
             'threshold': {
                 'line': {'color': "red", 'width': 4},
@@ -125,15 +122,12 @@ def create_risk_gauge(value, title, min_val=0, max_val=1, threshold_low=0.3, thr
             }
         }
     ))
-    fig.update_layout(height=300)
+    fig.update_layout(height=300, paper_bgcolor='white', plot_bgcolor='white')
     return fig
 
 def monte_carlo_simulation(returns, weights, num_simulations=1000, time_horizon=252):
-    """Enhanced Monte Carlo simulation with correlation"""
     mean_returns = returns.mean()
     cov_matrix = returns.cov()
-    
-    # Ensure positive definite covariance matrix
     eigenvals, eigenvecs = np.linalg.eigh(cov_matrix)
     eigenvals = np.maximum(eigenvals, 1e-8)
     cov_matrix = eigenvecs @ np.diag(eigenvals) @ eigenvecs.T
@@ -148,13 +142,14 @@ def monte_carlo_simulation(returns, weights, num_simulations=1000, time_horizon=
         final_return = cumulative_path[-1] - 1
         
         results.append(final_return)
-        if len(paths) < 100:  # Store first 100 paths for visualization
+        if len(paths) < 100:
             paths.append(cumulative_path)
     
     return np.array(results), np.array(paths)
 
-# Main Dashboard
-st.markdown('<h1 class="main-header">🚀 Advanced Portfolio Risk & Analysis Dashboard</h1>', unsafe_allow_html=True)
+# Header
+st.markdown('<h1 class="main-title">📊 Portfolio Risk & Analysis Dashboard</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Professional portfolio analysis with comprehensive risk metrics</p>', unsafe_allow_html=True)
 
 # Load data
 if not st.session_state.data_loaded:
@@ -165,195 +160,210 @@ if not st.session_state.data_loaded:
         st.session_state.risk_data = risk_data
         st.session_state.interest_data = interest_data
         st.session_state.data_loaded = True
-        st.success("✅ All data loaded successfully!")
     except Exception as e:
-        st.error(f"❌ Error loading data: {e}")
+        st.error(f"Error loading data: {e}")
         st.stop()
 
-# Get data from session state
+# Get data
 scheme_data = st.session_state.scheme_data
 benchmark_data = st.session_state.benchmark_data
 risk_data = st.session_state.risk_data
 interest_data = st.session_state.interest_data
 
-# Initialize with default data first
+# Initialize analyzer
 analyzer = PortfolioAnalyzer(st.session_state.scheme_data, benchmark_data, risk_data, interest_data)
 benchmark_returns = analyzer.calculate_returns(benchmark_data)
 
-# Sidebar configuration
-st.sidebar.markdown("## 🎛️ Portfolio Configuration")
-
-# Company Data Input Section
-st.sidebar.markdown("### 🏢 Add Companies")
-with st.sidebar.expander("Add New Company", expanded=False):
-    company_name = st.text_input("Company Name", placeholder="e.g., Apple Inc")
-    data_source = st.selectbox("Data Source", ["Yahoo Finance", "MoneyControl", "Generic URL"])
+# Sidebar
+with st.sidebar:
+    st.markdown("## ⚙️ Portfolio Configuration")
     
-    if data_source == "Yahoo Finance":
-        company_url = st.text_input("Ticker Symbol", placeholder="e.g., AAPL")
-        data_type = 'yahoo'
-    elif data_source == "MoneyControl":
-        company_url = st.text_input("MoneyControl URL", placeholder="https://www.moneycontrol.com/...")
-        data_type = 'moneycontrol'
-    else:
-        company_url = st.text_input("Data URL", placeholder="https://...")
-        data_type = 'generic'
+    # Default Assets Selection
+    st.markdown("### 🏦 Default Assets")
+    default_assets = {
+        'ICICI_Large_Cap_NAV': 'ICICI Large Cap Fund',
+        'Parag_Parikh_Flexi_NAV': 'Parag Parikh Flexi Cap',
+        'HDFC_Mid_Cap_NAV': 'HDFC Mid Cap Fund'
+    }
     
-    add_clicked = st.button("➕ Add Company", key="add_company_btn")
+    selected_defaults = []
+    for key, name in default_assets.items():
+        if st.checkbox(name, value=key in st.session_state.selected_defaults, key=f"default_{key}"):
+            selected_defaults.append(key)
     
-    if add_clicked:
-        if not company_name:
-            st.error("Please enter a company name")
-        elif not company_url:
-            st.error("Please enter a ticker/URL")
+    st.session_state.selected_defaults = selected_defaults
+    
+    st.divider()
+    
+    # Add Custom Companies
+    st.markdown("### ➕ Add Custom Company")
+    with st.expander("Add New Company", expanded=False):
+        company_name = st.text_input("Company Name", placeholder="e.g., Tesla Inc")
+        data_source = st.selectbox("Data Source", ["Yahoo Finance", "MoneyControl", "Generic URL"])
+        
+        if data_source == "Yahoo Finance":
+            company_url = st.text_input("Ticker Symbol", placeholder="e.g., TSLA")
+            data_type = 'yahoo'
+        elif data_source == "MoneyControl":
+            company_url = st.text_input("MoneyControl URL", placeholder="https://www.moneycontrol.com/...")
+            data_type = 'moneycontrol'
         else:
-            try:
+            company_url = st.text_input("Data URL", placeholder="https://...")
+            data_type = 'generic'
+        
+        if st.button("Add Company", use_container_width=True):
+            if company_name and company_url:
                 st.session_state.loader.add_company_data(company_name, company_url, data_type)
                 if company_name not in st.session_state.user_companies:
                     st.session_state.user_companies.append(company_name)
-                    st.session_state.company_urls[company_name] = company_url
-                st.success(f"Added {company_name}!")
+                st.success(f"✅ Added {company_name}")
                 st.rerun()
-            except Exception as e:
-                st.error(f"Error adding company: {e}")
+            else:
+                st.error("Please fill all fields")
+    
+    # Show added companies
+    if st.session_state.user_companies:
+        st.markdown("### 📈 Your Companies")
+        for company in st.session_state.user_companies:
+            col1, col2 = st.columns([3, 1])
+            col1.write(f"• {company}")
+            if col2.button("🗑️", key=f"del_{company}"):
+                st.session_state.user_companies.remove(company)
+                st.rerun()
+    
+    st.divider()
+    
+    # Investment Amount
+    st.markdown("### 💰 Investment Amount")
+    investment_amount = st.number_input(
+        "Total Investment (₹)",
+        min_value=1000,
+        value=100000,
+        step=1000,
+        format="%d"
+    )
+    
+    st.divider()
+    
+    # Risk Settings
+    st.markdown("### ⚠️ Risk Settings")
+    risk_tolerance = st.selectbox(
+        "Risk Tolerance",
+        ["Conservative", "Moderate", "Aggressive"],
+        index=1
+    )
+    
+    confidence_level = st.slider(
+        "VaR Confidence Level",
+        min_value=90,
+        max_value=99,
+        value=95,
+        step=1
+    ) / 100
 
-# Display added companies
-if st.session_state.user_companies:
-    st.sidebar.markdown("### 📈 Your Companies")
-    for company in st.session_state.user_companies:
-        col1, col2 = st.sidebar.columns([3, 1])
-        col1.write(f"• {company}")
-        if col2.button("🗑️", key=f"del_{company}"):
-            st.session_state.user_companies.remove(company)
-            del st.session_state.company_urls[company]
-            st.rerun()
+# Prepare portfolio data
+portfolio_data = {}
 
-# Load data with user companies or default
+# Add selected default assets
+for asset in st.session_state.selected_defaults:
+    if asset in scheme_data.columns:
+        portfolio_data[asset] = scheme_data[asset]
+
+# Add user companies
 if st.session_state.user_companies:
-    scheme_data = st.session_state.loader.load_scheme_historical_data(st.session_state.user_companies)
+    user_data = st.session_state.loader.load_dynamic_portfolio_data(st.session_state.user_companies)
+    if not user_data.empty:
+        for company in user_data.columns:
+            portfolio_data[company] = user_data[company]
+
+# Create final portfolio dataframe
+if portfolio_data:
+    final_portfolio_df = pd.DataFrame(portfolio_data)
 else:
-    scheme_data = st.session_state.scheme_data
+    final_portfolio_df = scheme_data
 
-# Always reinitialize analyzer with current data
-analyzer = PortfolioAnalyzer(scheme_data, benchmark_data, risk_data, interest_data)
-scheme_returns = analyzer.calculate_returns(scheme_data)
+# Update analyzer with final portfolio
+analyzer = PortfolioAnalyzer(final_portfolio_df, benchmark_data, risk_data, interest_data)
+scheme_returns = analyzer.calculate_returns(final_portfolio_df)
+fund_names = list(final_portfolio_df.columns)
 
-fund_names = list(scheme_data.columns)
+# Portfolio weights in sidebar
+with st.sidebar:
+    st.markdown("### ⚖️ Portfolio Weights")
+    portfolio_weights = {}
+    
+    for i, fund in enumerate(fund_names):
+        clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
+        portfolio_weights[fund] = st.slider(
+            clean_name,
+            0.0, 1.0, 1.0/len(fund_names),
+            step=0.01,
+            key=f"weight_{i}"
+        )
+    
+    # Normalize weights
+    total_weight = sum(portfolio_weights.values())
+    if total_weight > 0:
+        portfolio_weights = {k: v/total_weight for k, v in portfolio_weights.items()}
+    
+    weights_array = np.array(list(portfolio_weights.values()))
+    
+    # Show position values
+    st.markdown("### 📊 Position Values")
+    for fund, weight in portfolio_weights.items():
+        clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
+        value = investment_amount * weight
+        st.write(f"**{clean_name}**: ₹{value:,.0f}")
 
-# Portfolio weights
-st.sidebar.markdown("### ⚖️ Asset Allocation")
-portfolio_weights = {}
+# Main content
+portfolio_metrics = analyzer.calculate_portfolio_metrics(scheme_returns, weights_array)
+portfolio_returns_series = (scheme_returns * weights_array).sum(axis=1)
 
-for i, fund in enumerate(fund_names):
-    clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
-    portfolio_weights[fund] = st.sidebar.slider(
-        clean_name, 
-        min_value=0.0, 
-        max_value=1.0, 
-        value=1.0/len(fund_names),
-        step=0.01,
-        key=f"weight_{i}"
+# Key metrics row
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    expected_return_value = investment_amount * portfolio_metrics['Expected_Return']
+    st.metric(
+        "📈 Expected Return",
+        f"{portfolio_metrics['Expected_Return']:.1%}",
+        f"₹{expected_return_value:,.0f}"
     )
 
-# Normalize weights
-total_weight = sum(portfolio_weights.values())
-if total_weight > 0:
-    portfolio_weights = {k: v/total_weight for k, v in portfolio_weights.items()}
-else:
-    portfolio_weights = {k: 1.0/len(fund_names) for k in fund_names}
+with col2:
+    volatility_value = investment_amount * portfolio_metrics['Volatility']
+    st.metric(
+        "📊 Volatility",
+        f"{portfolio_metrics['Volatility']:.1%}",
+        f"₹{volatility_value:,.0f}"
+    )
 
-weights_array = np.array(list(portfolio_weights.values()))
+with col3:
+    st.metric(
+        "⚡ Sharpe Ratio",
+        f"{portfolio_metrics['Sharpe_Ratio']:.2f}"
+    )
 
-# Display current allocation
-st.sidebar.markdown("### 📈 Current Allocation")
-for fund, weight in portfolio_weights.items():
-    clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
-    st.sidebar.write(f"**{clean_name}**: {weight:.1%}")
+with col4:
+    max_drawdown_value = investment_amount * abs(portfolio_metrics['Max_Drawdown'])
+    st.metric(
+        "📉 Max Drawdown",
+        f"{portfolio_metrics['Max_Drawdown']:.1%}",
+        f"₹{max_drawdown_value:,.0f}"
+    )
 
-# Investment amount
-st.sidebar.markdown("### 💰 Investment Amount")
-investment_amount = st.sidebar.number_input(
-    "Total Investment (₹)",
-    min_value=1000,
-    max_value=10000000,
-    value=100000,
-    step=1000,
-    format="%d"
-)
+st.divider()
 
-# Calculate position sizes
-position_values = {}
-for fund, weight in portfolio_weights.items():
-    position_values[fund] = investment_amount * weight
-
-# Display position values
-st.sidebar.markdown("### 📊 Position Values")
-for fund, value in position_values.items():
-    clean_name = fund.replace('_', ' ').replace('NAV', '').strip()
-    st.sidebar.write(f"**{clean_name}**: ₹{value:,.0f}")
-
-# Risk tolerance
-st.sidebar.markdown("### ⚠️ Risk Settings")
-risk_tolerance = st.sidebar.selectbox(
-    "Risk Tolerance",
-    ["Conservative", "Moderate", "Aggressive"],
-    index=1
-)
-
-confidence_level = st.sidebar.slider(
-    "VaR Confidence Level",
-    min_value=90,
-    max_value=99,
-    value=95,
-    step=1
-) / 100
-
-# Create main tabs
-tab1, tab2, tab3, tab4 = st.tabs([
-    "🎯 Risk Analysis", 
-    "📈 Scenario Analysis", 
-    "⚡ Sensitivity Analysis",
-    "📊 Portfolio Optimization"
-])
+# Tabs
+tab1, tab2, tab3, tab4 = st.tabs(["🎯 Risk Analysis", "📈 Scenario Analysis", "⚡ Sensitivity Analysis", "📊 Portfolio Optimization"])
 
 with tab1:
-    st.markdown('<h2 class="sub-header">🎯 Comprehensive Risk Analysis</h2>', unsafe_allow_html=True)
+    st.markdown("### 🎯 Comprehensive Risk Analysis")
     
-    # Calculate portfolio metrics
-    portfolio_metrics = analyzer.calculate_portfolio_metrics(scheme_returns, weights_array)
-    portfolio_returns_series = (scheme_returns * weights_array).sum(axis=1)
-    
-    # Top metrics row
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        expected_return_value = investment_amount * portfolio_metrics['Expected_Return']
-        st.metric("📈 Expected Return", f"{portfolio_metrics['Expected_Return']:.2%}", f"₹{expected_return_value:,.0f}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        volatility_value = investment_amount * portfolio_metrics['Volatility']
-        st.metric("📊 Volatility", f"{portfolio_metrics['Volatility']:.2%}", f"₹{volatility_value:,.0f}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("⚡ Sharpe Ratio", f"{portfolio_metrics['Sharpe_Ratio']:.3f}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        max_drawdown_value = investment_amount * abs(portfolio_metrics['Max_Drawdown'])
-        st.metric("📉 Max Drawdown", f"{portfolio_metrics['Max_Drawdown']:.2%}", f"₹{max_drawdown_value:,.0f}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Performance chart and risk gauges
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # Portfolio vs benchmark performance
+        # Performance chart
         portfolio_cumulative = (1 + portfolio_returns_series).cumprod()
         benchmark_cumulative = (1 + benchmark_returns.mean(axis=1)).cumprod()
         
@@ -363,14 +373,14 @@ with tab1:
             y=portfolio_cumulative.values,
             mode='lines',
             name='Portfolio',
-            line=dict(color='#1f77b4', width=3)
+            line=dict(color='#3b82f6', width=3)
         ))
         fig.add_trace(go.Scatter(
             x=benchmark_cumulative.index,
             y=benchmark_cumulative.values,
             mode='lines',
             name='Benchmark',
-            line=dict(color='#ff7f0e', width=2)
+            line=dict(color='#ef4444', width=2)
         ))
         
         fig.update_layout(
@@ -378,14 +388,16 @@ with tab1:
             xaxis_title="Date",
             yaxis_title="Cumulative Returns",
             height=400,
+            plot_bgcolor='white',
+            paper_bgcolor='white',
             hovermode='x unified'
         )
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        # Risk gauges
+        # Risk gauge
         volatility_gauge = create_risk_gauge(
-            portfolio_metrics['Volatility'], 
+            portfolio_metrics['Volatility'],
             "Volatility Risk",
             max_val=0.5,
             threshold_low=0.15,
@@ -422,36 +434,27 @@ with tab1:
         st.write(f"Information Ratio: {portfolio_metrics['Information_Ratio']:.3f}")
 
 with tab2:
-    st.markdown('<h2 class="sub-header">📈 Advanced Scenario Analysis</h2>', unsafe_allow_html=True)
+    st.markdown("### 📈 Advanced Scenario Analysis")
     
     col1, col2 = st.columns([1, 2])
     
     with col1:
-        st.markdown("### 🎛️ Scenario Parameters")
+        st.markdown("**🎛️ Scenario Parameters**")
         
-        # Predefined scenarios
         scenario_type = st.selectbox(
             "Select Scenario Type",
             ["Custom", "Market Crash", "Bull Market", "High Inflation", "Interest Rate Shock"]
         )
         
         if scenario_type == "Market Crash":
-            market_shock = -25
-            volatility_shock = 100
-            interest_rate_change = 50
+            market_shock, volatility_shock, interest_rate_change = -25, 100, 50
         elif scenario_type == "Bull Market":
-            market_shock = 20
-            volatility_shock = -20
-            interest_rate_change = -25
+            market_shock, volatility_shock, interest_rate_change = 20, -20, -25
         elif scenario_type == "High Inflation":
-            market_shock = -10
-            volatility_shock = 50
-            interest_rate_change = 150
+            market_shock, volatility_shock, interest_rate_change = -10, 50, 150
         elif scenario_type == "Interest Rate Shock":
-            market_shock = -5
-            volatility_shock = 25
-            interest_rate_change = 200
-        else:  # Custom
+            market_shock, volatility_shock, interest_rate_change = -5, 25, 200
+        else:
             market_shock = st.slider("Market Return Shock (%)", -30, 30, 0, 1)
             volatility_shock = st.slider("Volatility Shock (%)", -50, 200, 0, 5)
             interest_rate_change = st.slider("Interest Rate Change (bps)", -200, 200, 0, 25)
@@ -464,87 +467,46 @@ with tab2:
         time_horizon = st.selectbox("Analysis Period (Days)", [30, 90, 180, 252], index=3)
     
     with col2:
-        st.markdown("### 📊 Scenario Impact Analysis")
+        st.markdown("**📊 Scenario Impact Analysis**")
         
         # Calculate base case
         base_metrics = analyzer.calculate_portfolio_metrics(scheme_returns, weights_array)
         
-        # Apply shocks to create scenario
+        # Apply shocks
         shocked_returns = scheme_returns.copy()
         shocked_returns = shocked_returns * (1 + market_shock/100)
         shocked_returns = shocked_returns * (1 + volatility_shock/100)
         
         scenario_metrics = analyzer.calculate_portfolio_metrics(shocked_returns, weights_array)
         
-        # Create comparison
-        comparison_data = {
-            'Metric': list(base_metrics.keys()),
-            'Base Case': list(base_metrics.values()),
-            'Scenario Case': list(scenario_metrics.values()),
-            'Change': [scenario_metrics[k] - base_metrics[k] for k in base_metrics.keys()]
-        }
+        # Create comparison chart
+        metrics_comparison = pd.DataFrame({
+            'Base Case': [base_metrics['Expected_Return'], base_metrics['Volatility'], base_metrics['Sharpe_Ratio']],
+            'Scenario Case': [scenario_metrics['Expected_Return'], scenario_metrics['Volatility'], scenario_metrics['Sharpe_Ratio']]
+        }, index=['Expected Return', 'Volatility', 'Sharpe Ratio'])
         
-        comparison_df = pd.DataFrame(comparison_data)
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name='Base Case',
+            x=metrics_comparison.index,
+            y=metrics_comparison['Base Case'],
+            marker_color='#3b82f6'
+        ))
+        fig.add_trace(go.Bar(
+            name='Scenario Case',
+            x=metrics_comparison.index,
+            y=metrics_comparison['Scenario Case'],
+            marker_color='#ef4444'
+        ))
         
-        # Visualization
-        fig = make_subplots(
-            rows=2, cols=2,
-            subplot_titles=('Return Comparison', 'Risk Comparison', 'Ratios Comparison', 'Change Impact'),
-            specs=[[{"secondary_y": False}, {"secondary_y": False}],
-                   [{"secondary_y": False}, {"secondary_y": False}]]
+        fig.update_layout(
+            title="Base Case vs Scenario Analysis",
+            xaxis_title="Metrics",
+            yaxis_title="Values",
+            barmode='group',
+            height=400,
+            plot_bgcolor='white'
         )
-        
-        # Return metrics
-        return_metrics = ['Expected_Return', 'Alpha']
-        fig.add_trace(
-            go.Bar(name='Base Case', x=return_metrics, 
-                   y=[base_metrics[m] for m in return_metrics], marker_color='lightblue'),
-            row=1, col=1
-        )
-        fig.add_trace(
-            go.Bar(name='Scenario Case', x=return_metrics, 
-                   y=[scenario_metrics[m] for m in return_metrics], marker_color='darkblue'),
-            row=1, col=1
-        )
-        
-        # Risk metrics
-        risk_metrics = ['Volatility', 'Max_Drawdown']
-        fig.add_trace(
-            go.Bar(name='Base Case', x=risk_metrics, 
-                   y=[abs(base_metrics[m]) for m in risk_metrics], marker_color='lightcoral', showlegend=False),
-            row=1, col=2
-        )
-        fig.add_trace(
-            go.Bar(name='Scenario Case', x=risk_metrics, 
-                   y=[abs(scenario_metrics[m]) for m in risk_metrics], marker_color='darkred', showlegend=False),
-            row=1, col=2
-        )
-        
-        # Ratios
-        ratio_metrics = ['Sharpe_Ratio', 'Sortino_Ratio']
-        fig.add_trace(
-            go.Bar(name='Base Case', x=ratio_metrics, 
-                   y=[base_metrics[m] for m in ratio_metrics], marker_color='lightgreen', showlegend=False),
-            row=2, col=1
-        )
-        fig.add_trace(
-            go.Bar(name='Scenario Case', x=ratio_metrics, 
-                   y=[scenario_metrics[m] for m in ratio_metrics], marker_color='darkgreen', showlegend=False),
-            row=2, col=1
-        )
-        
-        # Change impact
-        change_values = [comparison_df.loc[comparison_df['Metric'] == m, 'Change'].iloc[0] 
-                        for m in ['Expected_Return', 'Volatility', 'Sharpe_Ratio', 'Max_Drawdown']]
-        colors = ['green' if x > 0 else 'red' for x in change_values]
-        
-        fig.add_trace(
-            go.Bar(x=['Return', 'Volatility', 'Sharpe', 'Drawdown'], 
-                   y=change_values, marker_color=colors, showlegend=False),
-            row=2, col=2
-        )
-        
-        fig.update_layout(height=600, title_text="Scenario Analysis Results")
         st.plotly_chart(fig, use_container_width=True)
     
     # Monte Carlo Simulation
@@ -561,7 +523,6 @@ with tab2:
                 mc_results, mc_paths = monte_carlo_simulation(
                     scheme_returns, weights_array, num_simulations, mc_time_horizon
                 )
-                
                 st.session_state.mc_results = mc_results
                 st.session_state.mc_paths = mc_paths
     
@@ -577,7 +538,7 @@ with tab2:
             )
             
             fig.add_trace(
-                go.Histogram(x=mc_results, nbinsx=50, name='Returns', marker_color='lightblue'),
+                go.Histogram(x=mc_results, nbinsx=50, name='Returns', marker_color='#3b82f6'),
                 row=1, col=1
             )
             
@@ -585,12 +546,12 @@ with tab2:
             for i in range(min(20, len(mc_paths))):
                 fig.add_trace(
                     go.Scatter(y=mc_paths[i], mode='lines', 
-                              line=dict(width=1, color='rgba(0,100,80,0.2)'), 
+                              line=dict(width=1, color='rgba(59, 130, 246, 0.2)'), 
                               showlegend=False),
                     row=1, col=2
                 )
             
-            fig.update_layout(height=400, title_text="Monte Carlo Results")
+            fig.update_layout(height=400, title_text="Monte Carlo Results", plot_bgcolor='white')
             st.plotly_chart(fig, use_container_width=True)
             
             # Statistics
@@ -605,11 +566,9 @@ with tab2:
                 st.metric("95th Percentile", f"{np.percentile(mc_results, 95):.2%}")
 
 with tab3:
-    st.markdown('<h2 class="sub-header">⚡ Multi-Variable Sensitivity Analysis</h2>', unsafe_allow_html=True)
+    st.markdown("### ⚡ Multi-Variable Sensitivity Analysis")
     
     # Sensitivity parameter controls
-    st.markdown("### 🎛️ Sensitivity Parameters")
-    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -638,111 +597,36 @@ with tab3:
             # Create parameter ranges
             return_shocks = np.linspace(return_min, return_max, 11)
             vol_shocks = np.linspace(vol_min, vol_max, 11)
-            ir_shocks = np.linspace(ir_min, ir_max, 11)
             
-            # Calculate 2D sensitivity matrices
-            return_vol_matrix = np.zeros((len(return_shocks), len(vol_shocks)))
-            return_ir_matrix = np.zeros((len(return_shocks), len(ir_shocks)))
-            vol_ir_matrix = np.zeros((len(vol_shocks), len(ir_shocks)))
+            # Calculate sensitivity matrix
+            sensitivity_matrix = np.zeros((len(return_shocks), len(vol_shocks)))
+            base_return = portfolio_metrics['Expected_Return']
             
-            base_metrics = analyzer.calculate_portfolio_metrics(scheme_returns, weights_array)
-            base_return = base_metrics['Expected_Return']
-            
-            # Return vs Volatility sensitivity
             for i, ret_shock in enumerate(return_shocks):
                 for j, vol_shock in enumerate(vol_shocks):
                     shocked_returns = scheme_returns * (1 + ret_shock/100) * (1 + vol_shock/100)
                     metrics = analyzer.calculate_portfolio_metrics(shocked_returns, weights_array)
-                    return_vol_matrix[i, j] = metrics['Expected_Return'] - base_return
+                    sensitivity_matrix[i, j] = metrics['Expected_Return'] - base_return
             
-            # Return vs Interest Rate sensitivity
-            for i, ret_shock in enumerate(return_shocks):
-                for j, ir_shock in enumerate(ir_shocks):
-                    shocked_returns = scheme_returns * (1 + ret_shock/100) * (1 - ir_shock/10000)
-                    metrics = analyzer.calculate_portfolio_metrics(shocked_returns, weights_array)
-                    return_ir_matrix[i, j] = metrics['Expected_Return'] - base_return
-            
-            # Volatility vs Interest Rate sensitivity
-            for i, vol_shock in enumerate(vol_shocks):
-                for j, ir_shock in enumerate(ir_shocks):
-                    shocked_returns = scheme_returns * (1 + vol_shock/100) * (1 - ir_shock/10000)
-                    metrics = analyzer.calculate_portfolio_metrics(shocked_returns, weights_array)
-                    vol_ir_matrix[i, j] = metrics['Expected_Return'] - base_return
-            
-            # Create heatmaps
-            fig = make_subplots(
-                rows=2, cols=2,
-                subplot_titles=(
-                    'Return vs Volatility Sensitivity',
-                    'Return vs Interest Rate Sensitivity', 
-                    'Volatility vs Interest Rate Sensitivity',
-                    'Combined Sensitivity Summary'
-                ),
-                specs=[[{"type": "heatmap"}, {"type": "heatmap"}],
-                       [{"type": "heatmap"}, {"type": "bar"}]]
-            )
-            
-            # Heatmap 1: Return vs Volatility
-            fig.add_trace(
-                go.Heatmap(
-                    z=return_vol_matrix,
-                    x=[f"{v:.0f}%" for v in vol_shocks],
-                    y=[f"{r:.0f}%" for r in return_shocks],
-                    colorscale='RdYlBu_r',
-                    name="Return Impact"
-                ),
-                row=1, col=1
-            )
-            
-            # Heatmap 2: Return vs Interest Rate
-            fig.add_trace(
-                go.Heatmap(
-                    z=return_ir_matrix,
-                    x=[f"{ir:.0f}bps" for ir in ir_shocks],
-                    y=[f"{r:.0f}%" for r in return_shocks],
-                    colorscale='RdYlBu_r',
-                    showscale=False
-                ),
-                row=1, col=2
-            )
-            
-            # Heatmap 3: Volatility vs Interest Rate
-            fig.add_trace(
-                go.Heatmap(
-                    z=vol_ir_matrix,
-                    x=[f"{ir:.0f}bps" for ir in ir_shocks],
-                    y=[f"{v:.0f}%" for v in vol_shocks],
-                    colorscale='RdYlBu_r',
-                    showscale=False
-                ),
-                row=2, col=1
-            )
-            
-            # Summary bar chart
-            max_impacts = [
-                np.max(np.abs(return_vol_matrix)),
-                np.max(np.abs(return_ir_matrix)),
-                np.max(np.abs(vol_ir_matrix))
-            ]
-            
-            fig.add_trace(
-                go.Bar(
-                    x=['Return-Vol', 'Return-IR', 'Vol-IR'],
-                    y=max_impacts,
-                    marker_color=['#ff6b6b', '#4ecdc4', '#45b7d1'],
-                    name="Max Impact"
-                ),
-                row=2, col=2
-            )
+            # Create heatmap
+            fig = go.Figure(data=go.Heatmap(
+                z=sensitivity_matrix,
+                x=[f"{v:.0f}%" for v in vol_shocks],
+                y=[f"{r:.0f}%" for r in return_shocks],
+                colorscale='RdYlBu_r',
+                colorbar=dict(title="Return Impact")
+            ))
             
             fig.update_layout(
-                height=800,
-                title_text="Comprehensive Sensitivity Analysis Dashboard"
+                title="Portfolio Return Sensitivity Analysis",
+                xaxis_title="Volatility Shock (%)",
+                yaxis_title="Return Shock (%)",
+                height=500,
+                plot_bgcolor='white'
             )
-            
             st.plotly_chart(fig, use_container_width=True)
             
-            # Tornado chart for factor sensitivity
+            # Tornado chart
             st.markdown("### 🌪️ Factor Sensitivity (Tornado Chart)")
             
             factors = ['Market Return (+20%/-20%)', 'Volatility (+100%/-50%)', 
@@ -750,7 +634,6 @@ with tab3:
             low_impact = []
             high_impact = []
             
-            # Calculate individual factor impacts
             shock_scenarios = [
                 (0.8, 1.2),   # Market return
                 (0.5, 2.0),   # Volatility  
@@ -771,26 +654,22 @@ with tab3:
             # Create tornado chart
             fig = go.Figure()
             
-            y_pos = list(range(len(factors)))
-            
-            # Add bars for low impact (left side)
             fig.add_trace(go.Bar(
                 name='Downside Impact',
                 y=factors,
                 x=low_impact,
                 orientation='h',
-                marker_color='lightcoral',
+                marker_color='#ef4444',
                 text=[f"{x:.3f}" for x in low_impact],
                 textposition='inside'
             ))
             
-            # Add bars for high impact (right side)  
             fig.add_trace(go.Bar(
                 name='Upside Impact',
                 y=factors,
                 x=high_impact,
                 orientation='h',
-                marker_color='lightblue',
+                marker_color='#3b82f6',
                 text=[f"{x:.3f}" for x in high_impact],
                 textposition='inside'
             ))
@@ -801,15 +680,14 @@ with tab3:
                 yaxis_title="Risk Factors",
                 height=500,
                 barmode='overlay',
-                xaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='black')
+                xaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='black'),
+                plot_bgcolor='white'
             )
             
             st.plotly_chart(fig, use_container_width=True)
 
 with tab4:
-    st.markdown('<h2 class="sub-header">📊 Portfolio Optimization</h2>', unsafe_allow_html=True)
-    
-    st.markdown("### 🎯 Efficient Frontier Analysis")
+    st.markdown("### 📊 Portfolio Optimization")
     
     col1, col2 = st.columns([1, 2])
     
@@ -824,17 +702,15 @@ with tab4:
         )
         
         if st.button("🔍 Optimize Portfolio"):
-            # Simple optimization using random sampling (for demonstration)
+            # Simple optimization using random sampling
             n_portfolios = 10000
             results = np.zeros((3, n_portfolios))
             
             np.random.seed(42)
             for i in range(n_portfolios):
-                # Random weights
                 weights = np.random.random(len(fund_names))
                 weights /= np.sum(weights)
                 
-                # Portfolio metrics
                 portfolio_return = np.sum(scheme_returns.mean() * weights) * 252
                 portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(scheme_returns.cov() * 252, weights)))
                 sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_vol
@@ -845,12 +721,12 @@ with tab4:
             
             st.session_state.optimization_results = results
             
-            # Find optimal portfolio based on method
+            # Find optimal portfolio
             if optimization_method == "Maximum Sharpe Ratio":
                 optimal_idx = np.argmax(results[2])
             elif optimization_method == "Minimum Volatility":
                 optimal_idx = np.argmin(results[1])
-            else:  # Target Return
+            else:
                 target_diff = np.abs(results[0] - target_return)
                 optimal_idx = np.argmin(target_diff)
             
@@ -870,7 +746,6 @@ with tab4:
             # Efficient frontier plot
             fig = go.Figure()
             
-            # Scatter plot of all portfolios
             fig.add_trace(go.Scatter(
                 x=results[1],
                 y=results[0],
@@ -918,24 +793,20 @@ with tab4:
                 title="📊 Efficient Frontier Analysis",
                 xaxis_title="Volatility (Risk)",
                 yaxis_title="Expected Return",
-                height=500
+                height=500,
+                plot_bgcolor='white'
             )
             
             st.plotly_chart(fig, use_container_width=True)
 
 # Footer
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #666; padding: 20px;'>
-    <h3>🚀 Advanced Portfolio Risk & Analysis Dashboard</h3>
-    <p><strong>Features:</strong></p>
-    <ul style='list-style: none; padding: 0;'>
-        <li>🎯 <strong>Risk Analysis</strong>: Comprehensive portfolio risk metrics with interactive gauges</li>
-        <li>📈 <strong>Scenario Analysis</strong>: Advanced what-if analysis with Monte Carlo simulations</li>
-        <li>⚡ <strong>Sensitivity Analysis</strong>: Multi-variable sensitivity modeling with tornado charts</li>
-        <li>📊 <strong>Portfolio Optimization</strong>: Efficient frontier analysis and optimization</li>
-    </ul>
-    <p><em>Built with Streamlit, Plotly, and advanced financial modeling techniques</em></p>
-    <p><strong>Note:</strong> This dashboard uses sample data for demonstration. Connect to your actual data sources for live analysis.</p>
-</div>
-""", unsafe_allow_html=True)
+st.divider()
+st.markdown(
+    """
+    <div style='text-align: center; color: #64748b; padding: 1rem;'>
+        <p><strong>🚀 Advanced Portfolio Risk & Analysis Dashboard</strong></p>
+        <p><small>⚠️ For educational purposes only. Not investment advice.</small></p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
