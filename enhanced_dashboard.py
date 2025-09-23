@@ -366,11 +366,12 @@ with tab1:
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        # Performance chart
+        # Performance chart with multiple benchmarks
         portfolio_cumulative = (1 + portfolio_returns_series).cumprod()
-        benchmark_cumulative = (1 + benchmark_returns.mean(axis=1)).cumprod()
         
         fig = go.Figure()
+        
+        # Add portfolio line
         fig.add_trace(go.Scatter(
             x=portfolio_cumulative.index,
             y=portfolio_cumulative.values,
@@ -378,13 +379,19 @@ with tab1:
             name='Portfolio',
             line=dict(color='#3b82f6', width=3)
         ))
-        fig.add_trace(go.Scatter(
-            x=benchmark_cumulative.index,
-            y=benchmark_cumulative.values,
-            mode='lines',
-            name='Benchmark',
-            line=dict(color='#ef4444', width=2)
-        ))
+        
+        # Add benchmark lines
+        if not benchmark_data.empty:
+            for i, col in enumerate(benchmark_data.columns):
+                benchmark_cumulative = (1 + benchmark_returns[col]).cumprod()
+                colors = ['#ef4444', '#10b981', '#f59e0b']
+                fig.add_trace(go.Scatter(
+                    x=benchmark_cumulative.index,
+                    y=benchmark_cumulative.values,
+                    mode='lines',
+                    name=col.replace('_', ' '),
+                    line=dict(color=colors[i % len(colors)], width=2)
+                ))
         
         fig.update_layout(
             title="📈 Portfolio vs Benchmark Performance",
@@ -452,7 +459,7 @@ with tab2:
         if scenario_type == "Market Crash":
             market_shock, volatility_shock, interest_rate_change = -25, 100, 50
         elif scenario_type == "Bull Market":
-            market_shock, volatility_shock, interest_rate_change = 20, -20, -25
+            market_shock, volatility_shock, interest_rate_change = 25, -30, -50
         elif scenario_type == "High Inflation":
             market_shock, volatility_shock, interest_rate_change = -10, 50, 150
         elif scenario_type == "Interest Rate Shock":
@@ -479,6 +486,15 @@ with tab2:
         shocked_returns = scheme_returns.copy()
         shocked_returns = shocked_returns * (1 + market_shock/100)
         shocked_returns = shocked_returns * (1 + volatility_shock/100)
+        
+        # Apply interest rate and correlation effects
+        if interest_rate_change != 0:
+            ir_impact = interest_rate_change / 10000  # Convert bps to decimal impact
+            shocked_returns = shocked_returns * (1 - ir_impact)
+        
+        if correlation_change != 0:
+            corr_impact = correlation_change * 0.1  # Correlation impact on returns
+            shocked_returns = shocked_returns * (1 + corr_impact)
         
         scenario_metrics = analyzer.calculate_portfolio_metrics(shocked_returns, weights_array)
         
@@ -519,7 +535,7 @@ with tab2:
     
     with col1:
         num_simulations = st.number_input("Number of Simulations", 100, 10000, 1000, 100)
-        mc_time_horizon = st.number_input("Time Horizon (Days)", 30, 365, 252, 30)
+        mc_time_horizon = st.number_input("Time Horizon (Days)", 30, 1000, 252, 30)
         
         if st.button("🚀 Run Monte Carlo Simulation", type="primary"):
             with st.spinner("Running simulations..."):
